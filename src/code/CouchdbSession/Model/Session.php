@@ -123,7 +123,7 @@ class Made_CouchdbSession_Model_Session
      */
     public function destroy($id)
     {
-        $data = $this->_execute('/' . $id, 'DELETE');
+        $this->_execute('/' . $id, 'DELETE');
         return true;
     }
 
