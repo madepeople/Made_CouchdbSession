@@ -1,6 +1,6 @@
 <?php
 /**
- * CouchDB session read/write implementation. Uses document _ids
+ * CouchDB session read/write implementation. Uses document _ids as session IDs
  *
  * @author jonathan@madepeople.se
  */
@@ -8,6 +8,8 @@ class Made_CouchdbSession_Model_Session
     implements Zend_Session_SaveHandler_Interface
 {
     protected $_socket;
+    protected $_maxLifetime;
+
     protected $_hostname = '127.0.0.1';
     protected $_port = '5984';
     protected $_username;
@@ -21,6 +23,8 @@ class Made_CouchdbSession_Model_Session
      */
     public function __construct()
     {
+        $this->_maxLifetime = Mage::getStoreConfig('web/cookie/cookie_lifetime');
+
         $configKeys = array('hostname', 'port', 'username', 'password',
             'databaseName');
 
@@ -32,11 +36,6 @@ class Made_CouchdbSession_Model_Session
                 $this->$member = $value;
             }
         }
-    }
-
-    public function __destruct()
-    {
-        session_write_close();
     }
 
     /**
@@ -70,8 +69,10 @@ class Made_CouchdbSession_Model_Session
      */
     protected function _execute($url, $method = 'GET', $data = null)
     {
+        $this->_connect();
+
         $url = '/' . $this->_databaseName . $url;
-        $request = "$method $url HTTP/1.0\r\nHost: {$this->_host}\r\n";
+        $request = "$method $url HTTP/1.0\r\nHost: {$this->_hostname}\r\n";
         if (!empty($this->_username) || !empty($this->_password)) {
             $authentication = base64_encode($this->_username . ':' . $this->_password);
             $request .= 'Authorization: Basic ' . $authentication . "\r\n";
@@ -96,6 +97,8 @@ class Made_CouchdbSession_Model_Session
             $response .= fgets($this->_socket);
         }
 
+        $this->_disconnect();
+
         list ($headers, $body) = explode("\r\n\r\n", $response);
         return array(
             'headers' => $headers,
@@ -104,17 +107,28 @@ class Made_CouchdbSession_Model_Session
         );
     }
 
+    /**
+     * Delete a session from the storage
+     *
+     * @param string $id
+     * @return boolean
+     */
     public function destroy($id)
     {
         $data = $this->_execute('/' . $id, 'DELETE');
         return true;
     }
 
+    /**
+     * Garbage collection of old sessions
+     *
+     * @param type $maxlifetime
+     */
     public function gc($maxlifetime)
     {
         $documents = $this->_execute('/_all_docs');
         foreach ($documents as $document) {
-            if (time()-$document['session_expiry'] > $maxlifetime) {
+            if ($document['session_expiry'] < time()) {
                 $this->destroy($document['_id']);
             }
         }
@@ -127,13 +141,13 @@ class Made_CouchdbSession_Model_Session
      * @param string $name
      * @return boolean
      */
-    public function open($save_path, $name)
+    public function _connect()
     {
-        $this->_socket = @fsockopen($this->_host, $this->_port,
+        $this->_socket = @fsockopen($this->_hostname, $this->_port,
                 $errorCode = null, $errorString = null);
 
         if (!$this->_socket) {
-            $message = 'Could not open CouchDB connection to ' . $this->_host
+            $message = 'Could not open CouchDB connection to ' . $this->_hostname
                     . ':' . $this->_port . ' (' . $errorString . ')';
 
             throw new Zend_Session_Exception($message, $errorCode);
@@ -141,12 +155,34 @@ class Made_CouchdbSession_Model_Session
     }
 
     /**
-     * Close the (if open) socket connection to CouchDB
+     * Close the socket connection to CouchDB
      */
-    public function close()
+    public function _disconnect()
     {
         fclose($this->_socket);
         $this->_socket = null;
+    }
+
+    /**
+     * Unused, we open on demand
+     *
+     * @param type $save_path
+     * @param type $name
+     * @return boolean
+     */
+    public function open($save_path, $name)
+    {
+        return true;
+    }
+
+    /**
+     * Unused, we close on demand
+     *
+     * @return boolean
+     */
+    public function close()
+    {
+        return true;
     }
 
     /**
@@ -156,7 +192,14 @@ class Made_CouchdbSession_Model_Session
      */
     public function read($id)
     {
-        $data = $this->_execute('/' . $id);
+        $response = $this->_execute('/' . $id);
+        $data = $response['body'];
+
+        if (isset($data['error']) && $data['error'] === 'not_found') {
+            // We're writing a new session
+            return false;
+        }
+
         return $data['session_data'];
     }
 
@@ -170,19 +213,19 @@ class Made_CouchdbSession_Model_Session
     public function write($id, $data)
     {
         $response = $this->_execute('/' . $id);
-        $data = $response['body'];
+        $body = $response['body'];
 
-        if (isset($data['error']) && $data['error'] === 'not_found') {
+        if (isset($body['error']) && $body['error'] === 'not_found') {
             // We're writing a new session
-            $data['_id'] = $id;
+            $body = array('_id' => $id);
         }
 
-        $data['session_expiry'] = time()+Mage::getStoreConfig('web/cookie/cookie_lifetime');
-        $data['session_data'] = $data;
+        $body['session_expiry'] = time()+$this->_maxLifetime;
+        $body['session_data'] = $data;
 
         do {
-            $response = $this->_execute('/' . $id, 'PUT', $data);
-        } while (!(isset($response['body']['error']) && $response['body']['error'] === 'conflict'));
+            $response = $this->_execute('/' . $id, 'PUT', $body);
+        } while (isset($response['body']['error']) && $response['body']['error'] === 'conflict');
 
         return true;
     }
