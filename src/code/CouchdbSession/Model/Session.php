@@ -100,11 +100,19 @@ class Made_CouchdbSession_Model_Session
         $this->_disconnect();
 
         list ($headers, $body) = explode("\r\n\r\n", $response);
-        return array(
-            'headers' => $headers,
+        $result = array(
+            'headers' => explode("\n", $headers),
             'body_raw' => $body,
             'body' => Mage::helper('core')->jsonDecode($body)
         );
+
+        if (isset($result['body']['error']) && $result['body']['reason'] === 'no_db_file') {
+            // The database doesn't exist, create it
+            $response = $this->_execute('', 'PUT');
+            return $this->_execute($url, $method, $data);
+        }
+
+        return $result;
     }
 
     /**
