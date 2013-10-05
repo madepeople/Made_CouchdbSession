@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <modules>
+        <Made_CouchdbSession>
+            <version>1.0.0</version>
+        </Made_CouchdbSession>
+    </modules>
+    <global>
+        <models>
+            <core_resource>
+                <rewrite>
+                    <session>Made_CouchdbSession_Model_Session</session>
+                </rewrite>
+            </core_resource>
+        </models>
+    </global>
+</config>

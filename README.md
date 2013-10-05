@@ -1,2 +1,2 @@
-Magento Couchbase Session Handler
+Magento CouchDB Session Handler
 ==
