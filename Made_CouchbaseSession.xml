@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <modules>
+        <Made_CouchbaseSession
+            <active>true</active>
+            <codePool>community</codePool>
+        </Made_CouchbaseSession>
+    </modules>
+</config>
