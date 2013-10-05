@@ -1,2 +1,2 @@
 src/code/*                  app/code/community/Made/
-Made_CouchbaseSession.xml   app/etc/modules/
+Made_CouchdbSession.xml     app/etc/modules/
