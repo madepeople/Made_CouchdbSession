@@ -31,7 +31,7 @@ If your setup varies from this, the following options are available:
 	<!-- Default 127.0.0.1 -->
     <hostname></hostname>
 	<!-- Default 5984 -->
-    <port>5984</port>
+    <port></port>
 	<!-- Default empty -->
     <username></username>
 	<!-- Default empty -->
