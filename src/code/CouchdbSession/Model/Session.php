@@ -134,7 +134,7 @@ class Made_CouchdbSession_Model_Session
      *
      * @param type $maxlifetime
      */
-    public function gc($maxlifetime)
+    public function gc($maxlifetime = null)
     {
         $documents = $this->_execute('/_all_docs');
         foreach ($documents as $document) {

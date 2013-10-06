@@ -12,6 +12,21 @@
                     <session>Made_CouchdbSession_Model_Session</session>
                 </rewrite>
             </core_resource>
+            <made_couchdbsession>
+                <class>Made_CouchdbSession_Model</class>
+            </made_couchdbsession>
         </models>
     </global>
+    <crontab>
+        <jobs>
+            <couchdb_session_gc>
+                <schedule>
+                    <cron_expr>*/5 * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>made_couchdbsession/session::gc</model>
+                </run>
+            </couchdb_session_gc>
+        </jobs>
+    </crontab>
 </config>
