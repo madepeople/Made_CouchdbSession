@@ -208,7 +208,7 @@ class Made_CouchdbSession_Model_Session
             return false;
         }
 
-        return $data['session_data'];
+        return Mage::helper('core')->jsonDecode($data['session_data']);
     }
 
     /**
@@ -229,7 +229,7 @@ class Made_CouchdbSession_Model_Session
         }
 
         $body['session_expiry'] = time()+$this->_maxLifetime;
-        $body['session_data'] = $data;
+        $body['session_data'] = Mage::helper('core')->jsonEncode($data);
 
         do {
             $response = $this->_execute('/' . $id, 'PUT', $body);
