@@ -233,9 +233,15 @@ class Made_CouchdbSession_Model_Session
         $body['session_expiry'] = time()+$this->_maxLifetime;
         $body['session_data'] = Mage::helper('core')->jsonEncode($data);
 
-        do {
+        while (true) {
             $response = $this->_execute('/' . $id, 'PUT', $body);
-        } while (isset($response['body']['error']) && $response['body']['error'] === 'conflict');
+            if (isset($response['body']['error']) && $response['body']['error'] === 'conflict') {
+                $response = $this->_execute('/' . $id);
+                $body['session_data'] = Mage::helper('core')->jsonEncode($data);
+            } else {
+                break;
+            }
+        }
 
         return true;
     }
