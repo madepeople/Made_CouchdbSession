@@ -238,6 +238,9 @@ class Made_CouchdbSession_Model_Session
             if (isset($response['body']['error']) && $response['body']['error'] === 'conflict') {
                 $response = $this->_execute('/' . $id);
                 $body = $response['body'];
+                if (isset($body['error'])) {
+                    return false;
+                }
                 $body['session_data'] = Mage::helper('core')->jsonEncode($data);
             } else {
                 break;
