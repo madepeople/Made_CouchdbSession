@@ -54,6 +54,8 @@ class Made_CouchdbSession_Model_Session
             array($this, 'gc')
         );
 
+        register_shutdown_function('session_write_close');
+
         return $this;
     }
 
