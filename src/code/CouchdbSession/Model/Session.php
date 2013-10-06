@@ -45,11 +45,14 @@ class Made_CouchdbSession_Model_Session
     protected function _initialize()
     {
         // @TODO: Error handling, what is even error handling in this state?
-        $response = $this->_execute('', 'PUT');
+        $this->_execute('', 'PUT');
         $designDocument = Mage::helper('core')->jsonEncode(array(
             '_id' => '_design/misc',
             'shows' => array('is_session_valid' => "
                     function(doc, req) {
+                        if (!doc) {
+                            return false;
+                        }
                         var now = Math.round(new Date().getTime() / 1000);
                         var expiry = doc['session_expiry'];
                         return {
