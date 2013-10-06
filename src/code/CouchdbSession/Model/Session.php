@@ -207,7 +207,7 @@ class Made_CouchdbSession_Model_Session
 
         if (isset($data['error']) && $data['error'] === 'not_found') {
             // We're writing a new session
-            return false;
+            return "";
         }
 
         return Mage::helper('core')->jsonDecode($data['session_data']);
