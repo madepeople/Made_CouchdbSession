@@ -39,6 +39,40 @@ class Made_CouchdbSession_Model_Session
     }
 
     /**
+     * Create the database and set up the view needed for garbage collection
+     * as well as the show function used in conjunction with Varnish
+     */
+    protected function _initialize()
+    {
+        // @TODO: Error handling, what is even error handling in this state?
+        $response = $this->_execute('', 'PUT');
+        $designDocument = Mage::helper('core')->jsonEncode(array(
+            '_id' => '_design/misc',
+            'shows' => array('is_session_valid' => "
+                    function(doc, req) {
+                        var now = Math.round(new Date().getTime() / 1000);
+                        var expiry = doc['session_expiry'];
+                        return {
+                                'code':200,
+                                'headers':{ 'content-type': 'text/plain' },
+                                'body': ''+(expiry > now)
+                            };
+                    }"
+            ),
+            'views' => array(
+                'gc' => array('map' => "
+                    function(doc) {
+                        if ('session_expiry' in doc) {
+                            emit(doc.session_expiry, doc._rev);
+                        }
+                    }"
+                )
+            )
+        ));
+        $this->_execute('/_design/misc', 'PUT', $designDocument);
+    }
+
+    /**
      * Setup save handler
      *
      * @return Made_CouchdbSession_Model_Session
@@ -101,7 +135,7 @@ class Made_CouchdbSession_Model_Session
 
         $this->_disconnect();
 
-        list ($headers, $body) = explode("\r\n\r\n", $response);
+        list ($headers, $body) = explode("\r\n\r\n", $response, 2);
         $result = array(
             'headers' => explode("\n", $headers),
             'body_raw' => $body,
@@ -110,7 +144,7 @@ class Made_CouchdbSession_Model_Session
 
         if (isset($result['body']['error']) && $result['body']['reason'] === 'no_db_file') {
             // The database doesn't exist, create it
-            $response = $this->_execute('', 'PUT');
+            $this->_initialize();
             return $this->_execute($url, $method, $data);
         }
 
@@ -118,14 +152,27 @@ class Made_CouchdbSession_Model_Session
     }
 
     /**
-     * Delete a session from the storage
+     * Delete a session from the storage. If PHP calls this we need to fetch
+     * the latest revision manually.
      *
      * @param string $id
+     * @param string|null $revision
      * @return boolean
      */
-    public function destroy($id)
+    public function destroy($id, $revision = null)
     {
-        $this->_execute('/' . $id, 'DELETE');
+        if (empty($id)) {
+            return false;
+        }
+        if (empty($revision)) {
+            $response = $this->_execute('/' . $id);
+            if (isset($response['body']['error'])) {
+                return false;
+            }
+            $revision = $response['body']['_rev'];
+        }
+        $url = '/' . $id . '?rev=' . $revision;
+        $this->_execute($url , 'DELETE');
         return true;
     }
 
@@ -136,12 +183,19 @@ class Made_CouchdbSession_Model_Session
      */
     public function gc($maxlifetime = null)
     {
-        $documents = $this->_execute('/_all_docs');
-        foreach ($documents as $document) {
+        // Remove the sessions that expired at least a second ago
+        $endkey = time()-1;
+        $documents = $this->_execute('/_design/misc/_view/gc?endkey=' . $endkey);
+        if (!$documents['body']['total_rows']) {
+            return;
+        }
+        foreach ($documents['body']['rows'] as $document) {
             if ($document['session_expiry'] < time()) {
-                $this->destroy($document['_id']);
+                $this->destroy($document['id'], $document['value']);
             }
         }
+
+        // @TODO: _purge deleted sessions
     }
 
     /**
