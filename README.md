@@ -28,15 +28,15 @@ If your setup varies from this, the following options are available:
 ```xml
 <session_save><![CDATA[db]]></session_save>
 <couchdb_session>
-	<!-- Default 127.0.0.1 -->
+	<!-- Defaults to "127.0.0.1" -->
     <hostname></hostname>
-	<!-- Default 5984 -->
+	<!-- Defaults to "5984" -->
     <port></port>
-	<!-- Default empty -->
+	<!-- Empty default -->
     <username></username>
-	<!-- Default empty -->
+	<!-- Empty default -->
     <password></password>
-	<!-- Default magento_session, change this if you have one CouchDB for multiple Magento stores -->
+	<!-- Defaults to "magento_session", change this if you have one CouchDB for multiple Magento stores -->
     <databaseName></databaseName>
 </couchdb_session>
 ```
