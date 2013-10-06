@@ -1,6 +1,6 @@
 Magento CouchDB Session Handler
 ==
-This module adds the possibility to use a CouchDB server for storing sessions in Magento.
+This module adds the possibility to use a CouchDB server for storing Magento sessions.
 
 It has the following benefits:
 
