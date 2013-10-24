@@ -189,16 +189,34 @@ class Made_CouchdbSession_Model_Session
         // Remove the sessions that expired at least a second ago
         $endkey = time()-1;
         $documents = $this->_execute('/_design/misc/_view/gc?endkey=' . $endkey);
-        if (!$documents['body']['total_rows']) {
-            return;
-        }
-        foreach ($documents['body']['rows'] as $document) {
-            if ($document['session_expiry'] < time()) {
-                $this->destroy($document['id'], $document['value']);
+        if ($documents['body']['total_rows']) {
+            foreach ($documents['body']['rows'] as $document) {
+                if ($document['session_expiry'] < time()) {
+                    $this->destroy($document['id'], $document['value']);
+                }
             }
         }
 
-        // @TODO: _purge deleted sessions
+        $toPurge = array();
+        $deletedDocuments = $this->_execute('/_changes');
+        foreach ($deletedDocuments['body']['results'] as $document) {
+            if ($document['deleted']) {
+                $changes = array();
+                foreach ($document['changes'] as $change) {
+                    $changes[] = $change['rev'];
+                }
+                if (empty($toPurge[$document['id']])) {
+                    $toPurge[$document['id']] = array();
+                }
+                $toPurge[$document['id']] = array_merge(
+                        $toPurge[$document['id']],
+                        $changes);
+            }
+        }
+
+        if (!empty($toPurge)) {
+            $result = $this->_execute('/_purge', 'POST', $toPurge);
+        }
     }
 
     /**
