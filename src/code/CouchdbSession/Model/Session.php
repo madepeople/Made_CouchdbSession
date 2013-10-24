@@ -191,16 +191,14 @@ class Made_CouchdbSession_Model_Session
         $documents = $this->_execute('/_design/misc/_view/gc?endkey=' . $endkey);
         if ($documents['body']['total_rows']) {
             foreach ($documents['body']['rows'] as $document) {
-                if ($document['session_expiry'] < time()) {
-                    $this->destroy($document['id'], $document['value']);
-                }
+                $this->destroy($document['id'], $document['value']);
             }
         }
 
         $toPurge = array();
         $deletedDocuments = $this->_execute('/_changes');
         foreach ($deletedDocuments['body']['results'] as $document) {
-            if ($document['deleted']) {
+            if (isset($document['deleted']) && $document['deleted'] == 'true') {
                 $changes = array();
                 foreach ($document['changes'] as $change) {
                     $changes[] = $change['rev'];
