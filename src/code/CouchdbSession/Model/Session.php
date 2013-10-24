@@ -213,7 +213,7 @@ class Made_CouchdbSession_Model_Session
         }
 
         if (!empty($toPurge)) {
-            $result = $this->_execute('/_purge', 'POST', $toPurge);
+            $this->_execute('/_purge', 'POST', $toPurge);
         }
     }
 
