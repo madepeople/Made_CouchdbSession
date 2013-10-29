@@ -195,26 +195,7 @@ class Made_CouchdbSession_Model_Session
             }
         }
 
-        $toPurge = array();
-        $deletedDocuments = $this->_execute('/_changes');
-        foreach ($deletedDocuments['body']['results'] as $document) {
-            if (isset($document['deleted']) && $document['deleted'] == 'true') {
-                $changes = array();
-                foreach ($document['changes'] as $change) {
-                    $changes[] = $change['rev'];
-                }
-                if (empty($toPurge[$document['id']])) {
-                    $toPurge[$document['id']] = array();
-                }
-                $toPurge[$document['id']] = array_merge(
-                        $toPurge[$document['id']],
-                        $changes);
-            }
-        }
-
-        if (!empty($toPurge)) {
-            $this->_execute('/_purge', 'POST', $toPurge);
-        }
+        $this->_execute('/_compact', 'POST');
     }
 
     /**
