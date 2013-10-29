@@ -21,7 +21,7 @@
         <jobs>
             <couchdb_session_gc>
                 <schedule>
-                    <cron_expr>*/5 * * * *</cron_expr>
+                    <cron_expr>*/30 * * * *</cron_expr>
                 </schedule>
                 <run>
                     <model>made_couchdbsession/session::gc</model>
