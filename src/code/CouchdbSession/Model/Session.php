@@ -196,6 +196,7 @@ class Made_CouchdbSession_Model_Session
         }
 
         $this->_execute('/_compact', 'POST');
+        $this->_execute('/_compact/misc', 'POST');
     }
 
     /**
