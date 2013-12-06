@@ -40,12 +40,15 @@ class Made_CouchdbSession_Model_Session
 
     /**
      * Create the database and set up the view needed for garbage collection
-     * as well as the show function used in conjunction with Varnish
+     * as well as the show function used in conjunction with Varnish. We set
+     * the revisions limit to 50 instead of 1000. 50 seems reasonable taking
+     * concurrency into concern.
      */
     protected function _initialize()
     {
         // @TODO: Error handling, what is even error handling in this state?
         $this->_execute('', 'PUT');
+        $this->_execute('/_revs_limit', 'PUT', '50');
         $designDocument = Mage::helper('core')->jsonEncode(array(
             '_id' => '_design/misc',
             'shows' => array('is_session_valid' => "
@@ -122,12 +125,13 @@ class Made_CouchdbSession_Model_Session
                 // Assume the data is json encoded if it doesn't come as an array
                 $data = Mage::helper('core')->jsonEncode($data);
             }
-            $request .= 'Content-Length: ' . strlen($data) . "\r\n";
-            $request .= 'Content-Type: application/json' . "\r\n\r\n";
-            $request .= $data . "\r\n";
-        } else {
-            $request .= "\r\n";
+            $request .= 'Content-Type: application/json' . "\r\n";
+            $request .= 'Content-Length: ' . strlen($data) . "\r\n\r\n";
+            $request .= $data;
+        } else if ($method !== 'HEAD') {
+            $request .= 'Content-Type: application/json' . "\r\n";
         }
+        $request .= "\r\n";
 
         fwrite($this->_socket, $request);
 
